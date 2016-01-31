@@ -1,0 +1,87 @@
+---
+title: "Machine learning final project"
+author: "Antonio Mart?nez Pineda"
+date: "30 de enero de 2016"
+output: 
+  html_document: 
+    fig_caption: yes
+    highlight: zenburn
+    keep_md: yes
+    theme: cerulean
+---
+
+```{r, echo=F}
+knitr::opts_chunk$set(warning=F,message=F,comment=NA,tidy=T,cache=T)
+```
+
+#Summary#
+
+A machine learning was developed for predict the performance of six men doing a set of 10 dumbell in five different ways. The model for machine learning was developed with randomforest and crossvalidated with the caret package in R.
+Accuracy for the model in the training data was .999 and prediction's results was 20/20.
+
+#Introduction#
+
+The goal of this project was to create a machine learning to predict the way in dumbell excercise was made by six men performing one set of ten repetitions according to the specification (Class A), throwing elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D), and throwing the hips to the front (Class E).
+
+#Data obtaning and exploratory analysis#
+
+The [training](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) and [testing data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv) sets was downloading from the respective links and a exploratory analysis for missing data was made.
+
+In this report we assume the data sets are in the work directory.
+
+```{r}
+#loading data
+library(data.table)
+#if("pml-training.csv"%in%row.names(list.files())==F){
+#        url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-t#raining.csv"
+#       download.file(url,destfile = "pml-training.csv")
+#}
+training<- fread("pml-training.csv",verbose = T,
+                 na.strings = c("NA","N/A","#DIV/0!"),
+                 stringsAsFactors = T)
+#if("pml-testing.csv"%in%row.names(list.files())==F){
+#        url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-t#esting.csv"
+#        download.file(url,destfile = "pml-testing.csv")
+#}
+testing<- fread("pml-testing.csv",verbose = T,
+                na.strings = c("NA","N/A","#DIV/0!"),
+                stringsAsFactors=T)
+na.sums<-apply(training,2,function(x) sum(is.na(x)))
+del<-names(na.sums[na.sums>1900])
+#deleting variables with more than 19000 NA's
+training<-training[,c("V1",del) :=NULL]
+dim(training)
+na.sums<-apply(testing,2,function(x) sum(is.na(x)))
+del<-names(na.sums[na.sums>19])
+testing<-testing[,c("V1",del) :=NULL]
+dim(testing)
+```
+
+Only variables with less than 19000 missing data was taking into account for the following analysis.
+
+#Analysis#
+
+First try for machine learning was to use all available variables in a random forest model. This achieved the minimum accuracy required in the project's instructions. the machine learning model was carried out with the `caret`package and requires to be installed the packages `randomForest`and `e1071`. The use of parallel packages was recomended in with the available CPU -sadly my laptop has only  2 :(.
+
+Crossvalidated method was carried out in the model as default.
+
+```{r}
+library(caret)
+library(parallel)
+set.seed(1235)
+c<-makeCluster(2)
+model1<-train(classe~.,method="rf",data=training,
+              trControl = trainControl(method="cv"),number=3)
+stopCluster(c)
+model1
+model1$finalModel
+```
+
+Once model was perfromance a prediction for the 20 samples in testing set was made.
+
+```{r}
+pred<- predict(model1,newdata = testing)
+table(pred)
+```
+
+The results of predictions was 20/20 in the submit quiz.
